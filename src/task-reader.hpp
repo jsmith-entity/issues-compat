@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <vector>
+#include <optional>
 
 #include "task.hpp"
 
@@ -14,6 +15,8 @@ public:
     TaskReader(const std::filesystem::path& task_dir);
     void read();
     void print() const;
+    int size() const;
+    std::optional<Task> retrieve_task(std::size_t index) const;
 private:
     std::filesystem::path task_path;
     std::vector<Task> tasks;

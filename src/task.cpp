@@ -54,3 +54,20 @@ void Task::print() const {
     }
     std::cout << this->description << std::endl;
 } 
+
+std::string Task::create_cmd() const {
+    std::ostringstream cmd;
+    cmd << "gh issue create --title '" << this->title << "'";
+    cmd << " --body 'PRIORITY: " << this->priority << std::endl
+        << this->description << "'";
+
+    if (this->status == "CLOSED") {
+        cmd << " --status closed";
+    }
+
+    for (const auto& tag : this->tags) {
+        cmd << " --label '" << tag << "'";
+    }
+
+    return cmd.str();
+}

@@ -2,6 +2,7 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 
 #include "task-reader.hpp"
 
@@ -42,4 +43,15 @@ void TaskReader::print() const {
     for (const auto& task : this->tasks) {
         task.print();
     }
+}
+
+int TaskReader::size() const {
+    return this->tasks.size();
+}
+
+std::optional<Task> TaskReader::retrieve_task(std::size_t index) const {
+    if (index >= this->tasks.size()) {
+        return {};
+    }
+    return this->tasks[index];
 }
