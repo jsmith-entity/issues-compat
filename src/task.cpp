@@ -55,19 +55,23 @@ void Task::print() const {
     std::cout << this->description << std::endl;
 } 
 
-std::string Task::create_cmd() const {
+std::string Task::create_issue_cmd() const {
     std::ostringstream cmd;
     cmd << "gh issue create --title '" << this->title << "'";
     cmd << " --body 'PRIORITY: " << this->priority << std::endl
         << this->description << "'";
-
-    if (this->status == "CLOSED") {
-        cmd << " --status closed";
-    }
 
     for (const auto& tag : this->tags) {
         cmd << " --label '" << tag << "'";
     }
 
     return cmd.str();
+}
+
+std::string Task::get_title() const {
+    return this->title;
+}
+
+std::vector<std::string> Task::get_tags() const {
+    return this->tags;
 }

@@ -9,7 +9,9 @@ class Task {
 public:
     Task(const std::filesystem::path& file_path);
     void print() const;
-    std::string create_cmd() const;
+    std::string create_issue_cmd() const;
+    std::string get_title() const;
+    std::vector<std::string> get_tags() const;
 private:
     std::string title;
     std::string status;
