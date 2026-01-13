@@ -18,7 +18,7 @@ public:
     void print() const;
     int size() const;
 
-    void create_issues() const;
+    void create_issues();
 private:
     std::filesystem::path task_path;
     std::vector<Task> tasks;
@@ -28,7 +28,13 @@ private:
 
     void check_label(const std::string label) const;
     void create_label(const std::string label) const;
+
+    void create_issue(Task& task) const;
+    void update_issue(Task &task, const std::string &issue_line) const;
     std::string extract_issue_num(std::string issue_url) const;
+    void update_state(const Task& task) const;
+
+
 };
 
 #endif

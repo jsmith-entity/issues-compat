@@ -17,6 +17,7 @@
         gcc
 		gnumake
 		ccls
+        cloc
       ];
 
       shellHook = ''

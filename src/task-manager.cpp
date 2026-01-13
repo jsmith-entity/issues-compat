@@ -6,7 +6,7 @@
 #include <cassert>
 
 #include "task-manager.hpp"
-#include "utils.h"
+#include "utils.hpp"
 
 TaskManager::TaskManager(const path& task_path) {
     std::filesystem::directory_entry task_dir(task_path); 
@@ -51,44 +51,37 @@ int TaskManager::size() const {
     return this->tasks.size();
 }
 
-void TaskManager::create_issues() const {
-    const std::string list_cmd_template = "gh issue list | grep ";
-    for (const auto& task : this->tasks) {
+void TaskManager::create_issues() {
+    for (auto& task : this->tasks) {
         auto labels = task.get_tags();
         for (const auto& label : labels) {
-            check_label(label);
+            check_label(trim(label));
         }
 
-        std::string task_title = task.get_title();
-        std::ostringstream list_cmd;
-        list_cmd << list_cmd_template << "'" << task_title << "'";
-        auto found_issues = exec(list_cmd.str());
-        if (!found_issues) {
+        std::string issue_cmd_open = task.find_cmd(false);
+        std::string issue_cmd_closed = task.find_cmd(true);
+        auto found_open = exec(issue_cmd_open);
+        auto found_closed = exec(issue_cmd_closed);
+        if (!found_open || !found_closed) {
             return;
         }
 
-        if (found_issues == "") {
-            std::cout << "[info] creating issue '" << task_title
-                << "'.." << std::endl;
-
-            std::string issue_cmd = task.create_issue_cmd();
-            auto issue_url = exec(issue_cmd);
-            if (!issue_url) {
-                return;
-            }
+        bool close_check = false;
+        if (found_open == "" && found_closed == "") { // create issue
+            create_issue(task);
+            close_check = true;
+        } else if (found_open != "" && found_closed == "") { // update issue
+            update_issue(task, found_open.value());
+            close_check = true;
         } else {
-          // update existing issue
-            std::cout << "[info] issue '" << task_title
-                << "' already exists. skipping.." << std::endl;
+          std::cout << "[info] task is closed: '" << task.get_title()
+              << "' skipping.." << std::endl;
+        }
+
+        if (close_check) {
+            update_state(task);
         }
     }
-}
-
-std::string TaskManager::extract_issue_num(std::string issue_url) const {
-    size_t last_slash_pos = issue_url.find_last_of('/');
-    assert(last_slash_pos != std::string::npos);
-
-    return issue_url.substr(last_slash_pos + 1);
 }
 
 void TaskManager::check_label(const std::string label) const {
@@ -114,5 +107,61 @@ void TaskManager::create_label(const std::string label) const {
         exec(creation_cmd.str());
     } catch (std::runtime_error& e) {
         std::cerr << e.what() << std::endl;
+    }
+}
+
+void TaskManager::create_issue(Task& task) const {
+    std::cout << "[info] creating issue '" << task.get_title() 
+        << "'.." << std::endl;
+
+    std::string issue_cmd = task.create_issue_cmd();
+    auto issue_url = exec(issue_cmd);
+    if (!issue_url) {
+        std::cerr << "[error] failed to create issue" << std::endl;
+        return;
+    }
+
+    task.set_issue_num(issue_url.value());
+}
+
+void TaskManager::update_issue(Task &task, const std::string &issue_line) const {
+    size_t pos = issue_line.find_first_of("\t ");
+    assert(pos != std::string::npos);
+    std::string issue_num = issue_line.substr(0, pos);
+    task.set_issue_num(issue_num);
+
+    std::string view_cmd = task.view_cmd();
+    auto issue_details = exec(view_cmd);
+    if (!issue_details) {
+        std::cerr << "[error] failed to view issue" << std::endl;
+        return;
+    }
+
+    auto update_cmd = task.update_cmd(issue_details.value());
+    if (update_cmd) {
+        auto update_result = exec(update_cmd.value());
+        if (!update_result) {
+            std::cerr << "[error] failed to update issue" << std::endl;
+            return;
+        }
+        std::cout << "[info] updated task: '" << task.get_title() << "'"
+            << std::endl;
+    }
+}
+
+std::string TaskManager::extract_issue_num(std::string issue_url) const {
+    size_t last_slash_pos = issue_url.find_last_of('/');
+    assert(last_slash_pos != std::string::npos);
+
+    return issue_url.substr(last_slash_pos + 1);
+}
+
+void TaskManager::update_state(const Task& task) const {
+    if (task.get_status() == "COMPLETE") {
+        std::cout << "[info] issue completed: '" << task.get_title()
+            << "' closing.." << std::endl;
+
+        std::string close_cmd = task.close_cmd();
+        exec(close_cmd);
     }
 }
